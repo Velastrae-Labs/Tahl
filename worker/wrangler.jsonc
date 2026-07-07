@@ -1,0 +1,40 @@
+{
+    // Tahl reference Worker.
+    //
+    // Setup:
+    //   1. npx wrangler d1 create tahl-db
+    //   2. Paste the returned database_id below.
+    //   3. npx wrangler d1 migrations apply tahl-db --remote
+    //   4. npx wrangler secret put TAHL_API_KEY        (generate a long random string)
+    //   5. Optional cloud digest: npx wrangler secret put OPENROUTER_API_KEY
+    //   6. npx wrangler deploy
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "tahl",
+    "main": "src/index.ts",
+    "compatibility_date": "2026-06-01",
+    "d1_databases": [
+        {
+            "binding": "DB",
+            "database_name": "tahl-db",
+            "database_id": "REPLACE_WITH_YOUR_DATABASE_ID"
+        }
+    ],
+    "triggers": {
+        // Nightly digest at 23:00 UTC. Adjust to taste.
+        "crons": ["0 23 * * *"]
+    },
+    "vars": {
+        // 'cloud'  — the Worker digests nightly via OpenRouter (needs OPENROUTER_API_KEY),
+        //            falling back to the built-in deterministic digest if unset/unreachable.
+        // 'local'  — the Worker only closes day cards; your own machine runs the model
+        //            (see local-digest/) and posts the result back.
+        // 'fallback' — deterministic digest only, no model anywhere. Zero API costs.
+        "DIGEST_MODE": "cloud",
+        // Set to "true" to run a feeling check on every human message POSTed to /v1/events.
+        "AUTO_FEELING_CHECK": "false"
+        // Optional model override for cloud mode (default: openai/gpt-4o-mini):
+        // "OPENROUTER_MODEL": "openai/gpt-4o-mini"
+        // Optional EQ-tool handoff — completed digests are POSTed here:
+        // "EQ_WEBHOOK_URL": "https://your-eq-tool.example.com/webhook"
+    }
+}

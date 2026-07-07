@@ -1,0 +1,13 @@
+{
+  "name": "tahl-local-digest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tahl nightly digest via a local Ollama model — feelings stay on hardware you own.",
+  "type": "module",
+  "scripts": {
+    "digest": "node digest.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

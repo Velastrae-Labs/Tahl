@@ -1,0 +1,19 @@
+{
+  "name": "tahl-mcp",
+  "version": "1.0.0",
+  "description": "Tahl MCP server — moment capture, daily close, nightly digest, relationship threads for AI companions.",
+  "type": "module",
+  "bin": {
+    "tahl-mcp": "src/index.mjs"
+  },
+  "scripts": {
+    "start": "node src/index.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "license": "MIT"
+}

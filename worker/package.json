@@ -1,0 +1,18 @@
+{
+  "name": "tahl-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tahl reference Worker — moment capture, daily close, nightly digest, relationship threads.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create tahl-db",
+    "db:migrate": "wrangler d1 migrations apply tahl-db --remote",
+    "db:migrate:local": "wrangler d1 migrations apply tahl-db --local"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260601.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.0.0"
+  }
+}
