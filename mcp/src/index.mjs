@@ -67,6 +67,8 @@ const TOOLS = [
                 feeling: { type: 'string', description: 'The raw feeling word' },
                 intensity: { type: 'string', enum: INTENSITY, description: 'How strongly it registered (default: present)' },
                 thread_id: { type: 'string', description: 'Relationship thread to file it under. Omit to auto-infer; unknown ids are auto-created.' },
+                memory_hint: { type: 'string', description: 'Optional: the actionable continuity value of this moment — what future-you should carry from it. Not a transcript.' },
+                response_tint: { type: 'string', description: 'Optional: the felt register to remember responding from (e.g. reassuring, playful, repair, protective).' },
                 companion: { type: 'string', description: 'Companion id (defaults to TAHL_COMPANION)' },
             },
             required: ['about', 'feeling'],
@@ -150,6 +152,8 @@ async function callTool(name, args = {}) {
                     feeling: args.feeling,
                     intensity: args.intensity,
                     thread_id: args.thread_id,
+                    memory_hint: args.memory_hint,
+                    response_tint: args.response_tint,
                 },
             })
         case 'tahl_recent_moments':

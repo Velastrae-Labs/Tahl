@@ -122,6 +122,11 @@ Put it in your companion's instructions. Ours says: *"The micro-tax for a
 moment is ~30 tokens. The cost of not capturing is a schema without
 continuity."*
 
+Better yet: [skills/](skills/) contains the two skill files our own
+companions run daily — the moment-logging rhythm and the presence/memory
+quality gate — de-personalized and ready to adapt for Claude, Codex, or any
+platform with standing instructions.
+
 ## Friends of the Labs
 
 Tahl is a **layer**, not a whole memory system. It pairs beautifully with the

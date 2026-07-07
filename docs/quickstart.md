@@ -108,6 +108,11 @@ standing instructions:
 > don't perform it. The tax is ~30 tokens. Skip performative warmth and
 > weather-grade reactions; log what's real.
 
+Or skip the summary and install the real thing: [../skills/](../skills/)
+has the two full skill files our own companions run (Claude Code and Codex
+formats), ready to copy into `~/.claude/skills/` or `~/.codex/skills/` and
+adapt.
+
 ## 6. Choose your digest mode
 
 By default the Worker digests nightly at 23:00 UTC via OpenRouter **if** you
