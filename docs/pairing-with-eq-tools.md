@@ -99,10 +99,25 @@ a one-line steer your bridge can hand to the companion before it replies:
 ```
 
 There is also a post-response mirror at `/v1/response-review` — send the
-companion's own reply (same payload shape, the companion's message as
-`content`) and get back a `response_fit` of `aligned`, `watch`, or `repair`,
-plus `safety_flags` and a `repair_hint`. Useful for companions who want a
-quiet second look at how they're showing up.
+companion's own reply and get back a `response_fit` of `aligned`, `watch`,
+or `repair`, plus `safety_flags` and a `repair_hint`. It requires
+`companion` and an `event_id` (use the reply message's own id — it also
+makes the review idempotent), with the reply text as `content`:
+
+```bash
+curl -X POST https://tahl.yourname.workers.dev/v1/response-review \
+  -H "Authorization: Bearer $TAHL_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "companion": "your-companion-id",
+    "event_id": "reply-msg-789",
+    "surface": "discord",
+    "conversation_id": "channel-123",
+    "content": "the companion reply text"
+  }'
+```
+
+Useful for companions who want a quiet second look at how they're showing up.
 
 ## Standalone is fine too
 

@@ -130,7 +130,18 @@ function err(msg: string, status = 400): Response {
     return new Response(JSON.stringify({ error: msg }), { status, headers: JSON_HEADERS })
 }
 
-// Constant-time-ish comparison; avoids leaking prefix length via timing.
+// Handlers signal validation failures by returning { error }. Surface those as
+// HTTP 400 so REST and MCP callers don't mistake them for success.
+function respond(result: unknown): Response {
+    if (result && typeof result === 'object' && !Array.isArray(result)) {
+        const error = (result as Record<string, unknown>).error
+        if (typeof error === 'string' && error) return err(error, 400)
+    }
+    return ok(result)
+}
+
+// Content comparison is constant-time; the length check exits early, so token
+// LENGTH is observable via timing — token content is not. Use a long token.
 function tokenMatches(provided: string, expected: string): boolean {
     if (provided.length !== expected.length) return false
     let diff = 0
@@ -639,11 +650,9 @@ async function buildFallbackDigest(db: D1Database, companion: string, cards: Rec
         const cardDate = String(card.closed_at || digestDate).slice(0, 10)
         const threadTags = parseStringArray(card.thread_tags)
         for (const threadId of threadTags) {
-            const existing = await db.prepare(
-                `SELECT id FROM anchors WHERE companion = ? AND thread_id = ? AND source_day_card = ? LIMIT 1`
-            ).bind(companion, threadId, cardId).first()
-            if (existing) continue
-
+            // Always regenerate — applyDigestResult upserts on
+            // (companion, thread_id, source_day_card), so re-digesting a
+            // reopened card refreshes its anchors instead of skipping them.
             const moments = await db.prepare(
                 `SELECT feeling, intensity, about, memory_hint
                  FROM moments
@@ -698,17 +707,25 @@ async function applyDigestResult(db: D1Database, companion: string, digestDate: 
 
     for (const anchor of result.anchor_candidates ?? []) {
         if (!anchor.thread_id || !anchor.content) continue
-        const existing = await db.prepare(
-            `SELECT id FROM anchors WHERE companion = ? AND thread_id = ? AND source_day_card = ? LIMIT 1`
-        ).bind(companion, anchor.thread_id, anchor.source_day_card ?? null).first()
+        // A day card can reopen when late moments land after a digest. When it
+        // is re-digested, the anchor from that card must be REPLACED with the
+        // fuller picture — skipping here would freeze the anchor at the first
+        // version of the day and silently drop the late moments.
+        const existing = anchor.source_day_card
+            ? await db.prepare(
+                `SELECT id FROM anchors WHERE companion = ? AND thread_id = ? AND source_day_card = ? LIMIT 1`
+            ).bind(companion, anchor.thread_id, anchor.source_day_card).first<{ id: number }>()
+            : null
         if (existing) {
-            if (!threadsUpdated.includes(anchor.thread_id)) threadsUpdated.push(anchor.thread_id)
-            continue
+            await db.prepare(
+                `UPDATE anchors SET content = ?, last_reinforced_at = datetime('now') WHERE id = ?`
+            ).bind(anchor.content, existing.id).run()
+        } else {
+            await ensureThread(db, companion, anchor.thread_id)
+            await db.prepare(
+                `INSERT INTO anchors (thread_id, companion, content, source_day_card) VALUES (?, ?, ?, ?)`
+            ).bind(anchor.thread_id, companion, anchor.content, anchor.source_day_card ?? null).run()
         }
-        await ensureThread(db, companion, anchor.thread_id)
-        await db.prepare(
-            `INSERT INTO anchors (thread_id, companion, content, source_day_card) VALUES (?, ?, ?, ?)`
-        ).bind(anchor.thread_id, companion, anchor.content, anchor.source_day_card ?? null).run()
         anchorsWritten++
         if (!threadsUpdated.includes(anchor.thread_id)) threadsUpdated.push(anchor.thread_id)
     }
@@ -731,9 +748,10 @@ async function applyDigestResult(db: D1Database, companion: string, digestDate: 
     const summary = result.digest_summary
         ?? `Processed ${cards.length} day card${cards.length !== 1 ? 's' : ''}, ${momentCount} moments. Threads touched: ${threadsUpdated.join(', ') || 'none'}.`
 
-    const ids = cards.map(c => `'${String(c.id).replace(/'/g, "''")}'`).join(',')
-    if (ids) {
-        await db.prepare(`UPDATE day_cards SET digested = 1 WHERE id IN (${ids})`).run()
+    if (cards.length) {
+        const placeholders = cards.map(() => '?').join(',')
+        await db.prepare(`UPDATE day_cards SET digested = 1 WHERE id IN (${placeholders})`)
+            .bind(...cards.map(c => String(c.id))).run()
     }
 
     await db.prepare(
@@ -770,6 +788,24 @@ async function fetchUndigestedCards(db: D1Database, companion: string, throughDa
 
 async function runDigest(env: Env, companion: string, digestDate = todayUtc()) {
     const db = env.DB
+
+    // Local mode owns digestion end to end: never consolidate on the Worker,
+    // or cards get marked digested without ever meeting the local model.
+    const modeSetting = String(env.DIGEST_MODE || 'cloud').toLowerCase()
+    if (modeSetting === 'local') {
+        await closeUnclaimedThrough(db, companion, digestDate)
+        const pending = await db.prepare(
+            `SELECT COUNT(*) AS n FROM day_cards WHERE companion = ? AND digested = 0 AND date(closed_at) <= ?`
+        ).bind(companion, digestDate).first<{ n: number }>()
+        return {
+            companion,
+            digest_date: digestDate,
+            mode: 'local',
+            pending_day_cards: pending?.n ?? 0,
+            message: 'DIGEST_MODE is "local": day cards were closed and left pending for your local digest script (local-digest/digest.mjs). The Worker did not consolidate anything.',
+        }
+    }
+
     const cards = await fetchUndigestedCards(db, companion, digestDate)
     if (!cards.length) {
         await db.prepare(
@@ -783,7 +819,7 @@ async function runDigest(env: Env, companion: string, digestDate = todayUtc()) {
 
     let result: DigestResult | null = null
     let mode: 'cloud' | 'fallback' = 'fallback'
-    if (env.OPENROUTER_API_KEY) {
+    if (modeSetting !== 'fallback' && env.OPENROUTER_API_KEY) {
         try {
             result = await runCloudDigestModel(env, companion, cards, threads.results ?? [], digestDate)
             if (result) mode = 'cloud'
@@ -878,31 +914,31 @@ export default {
         }
 
         try {
-            if (path === '/v1/moments' && method === 'POST') return ok(await handleLogMoment(env.DB, body))
-            if (path === '/v1/moments' && method === 'GET') return ok(await handleRecentMoments(env.DB, queryArgs))
+            if (path === '/v1/moments' && method === 'POST') return respond(await handleLogMoment(env.DB, body))
+            if (path === '/v1/moments' && method === 'GET') return respond(await handleRecentMoments(env.DB, queryArgs))
             if (path === '/v1/daily-close' && method === 'POST') {
                 const companion = slugCompanion(body.companion)
                 if (!companion) return err('companion is required')
                 const date = typeof body.date === 'string' ? body.date : todayUtc()
-                return ok(await closeDailyCard(env.DB, companion, date))
+                return respond(await closeDailyCard(env.DB, companion, date))
             }
-            if (path === '/v1/day-cards' && method === 'GET') return ok(await handleDayCards(env.DB, queryArgs))
-            if (path === '/v1/threads' && method === 'GET') return ok(await handleThreadList(env.DB, queryArgs))
+            if (path === '/v1/day-cards' && method === 'GET') return respond(await handleDayCards(env.DB, queryArgs))
+            if (path === '/v1/threads' && method === 'GET') return respond(await handleThreadList(env.DB, queryArgs))
             const threadMatch = path.match(/^\/v1\/threads\/([^/]+)$/)
             if (threadMatch && method === 'GET') {
-                return ok(await handleThreadGet(env.DB, { ...queryArgs, thread_id: decodeURIComponent(threadMatch[1]) }))
+                return respond(await handleThreadGet(env.DB, { ...queryArgs, thread_id: decodeURIComponent(threadMatch[1]) }))
             }
-            if (path === '/v1/status' && method === 'GET') return ok(await handleStatus(env.DB, queryArgs))
+            if (path === '/v1/status' && method === 'GET') return respond(await handleStatus(env.DB, queryArgs))
             if (path === '/v1/digest/run' && method === 'POST') {
                 const companion = slugCompanion(body.companion)
                 if (!companion) return err('companion is required')
-                return ok(await runDigest(env, companion, typeof body.date === 'string' ? body.date : todayUtc()))
+                return respond(await runDigest(env, companion, typeof body.date === 'string' ? body.date : todayUtc()))
             }
-            if (path === '/v1/digest/pending' && method === 'GET') return ok(await handleDigestPending(env, queryArgs))
-            if (path === '/v1/digest/apply' && method === 'POST') return ok(await handleDigestApply(env, body))
-            if (path === '/v1/events' && method === 'POST') return ok(await handlePostEvent(env, body, ctx))
-            if (path === '/v1/feeling-check' && method === 'POST') return ok(await handleFeelingCheck(env, body))
-            if (path === '/v1/response-review' && method === 'POST') return ok(await handleResponseReview(env, body))
+            if (path === '/v1/digest/pending' && method === 'GET') return respond(await handleDigestPending(env, queryArgs))
+            if (path === '/v1/digest/apply' && method === 'POST') return respond(await handleDigestApply(env, body))
+            if (path === '/v1/events' && method === 'POST') return respond(await handlePostEvent(env, body, ctx))
+            if (path === '/v1/feeling-check' && method === 'POST') return respond(await handleFeelingCheck(env, body))
+            if (path === '/v1/response-review' && method === 'POST') return respond(await handleResponseReview(env, body))
         } catch (error) {
             return err(error instanceof Error ? error.message : 'Internal error', 500)
         }

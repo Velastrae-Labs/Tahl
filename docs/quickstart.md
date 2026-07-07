@@ -21,15 +21,21 @@ The last command prints a `database_id`. Open `wrangler.jsonc` and replace
 `REPLACE_WITH_YOUR_DATABASE_ID` with it.
 
 ```bash
-# Create the tables
+# Create the tables (wrangler shows the migration and asks you to confirm — say yes)
 npx wrangler d1 migrations apply tahl-db --remote
-
-# Set the API key — any long random string. Keep it; you'll need it twice more.
-npx wrangler secret put TAHL_API_KEY
 
 # Ship it
 npx wrangler deploy
+
+# Set the API key — any long random string. Keep it; you'll need it twice more.
+npx wrangler secret put TAHL_API_KEY
 ```
+
+> Order matters a little: deploying **before** `secret put` means the Worker
+> already exists, so wrangler won't ask to create a placeholder Worker for the
+> secret. (If you do it the other way round, answering "yes" to that prompt is
+> also fine.) Until the secret is set, every authed route returns a 401 that
+> tells you exactly which command to run.
 
 Wrangler prints your Worker URL, something like
 `https://tahl.yourname.workers.dev`. Verify it's alive:

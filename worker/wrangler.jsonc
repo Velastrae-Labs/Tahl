@@ -4,10 +4,10 @@
     // Setup:
     //   1. npx wrangler d1 create tahl-db
     //   2. Paste the returned database_id below.
-    //   3. npx wrangler d1 migrations apply tahl-db --remote
-    //   4. npx wrangler secret put TAHL_API_KEY        (generate a long random string)
-    //   5. Optional cloud digest: npx wrangler secret put OPENROUTER_API_KEY
-    //   6. npx wrangler deploy
+    //   3. npx wrangler d1 migrations apply tahl-db --remote   (confirm the prompt)
+    //   4. npx wrangler deploy
+    //   5. npx wrangler secret put TAHL_API_KEY        (generate a long random string)
+    //   6. Optional cloud digest: npx wrangler secret put OPENROUTER_API_KEY
     "$schema": "node_modules/wrangler/config-schema.json",
     "name": "tahl",
     "main": "src/index.ts",

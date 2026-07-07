@@ -79,7 +79,12 @@ want a model involved at all.
 
 ## Running a digest on demand
 
-Any mode, any time: ask your companion to call `tahl_run_digest`, or
+Ask your companion to call `tahl_run_digest`, or use curl (below). The
+Worker honors its configured mode: in `cloud`/`fallback` it consolidates
+immediately; in **`local` mode it only closes open days and reports how many
+cards are pending** — consolidation stays with your local script, so an
+eager on-demand call can never mark cards digested behind Ollama's back.
+(To run the local digest on demand, just run `node digest.mjs` by hand.)
 
 ```bash
 curl -X POST https://tahl.yourname.workers.dev/v1/digest/run \

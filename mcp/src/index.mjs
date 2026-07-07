@@ -128,7 +128,7 @@ const TOOLS = [
     },
     {
         name: 'tahl_run_digest',
-        description: 'Run the digest now instead of waiting for the nightly cron: closes open days, consolidates undigested day cards into anchored memories, updates thread health. Uses the Worker\'s configured digest mode.',
+        description: "Run the digest now instead of waiting for the nightly cron: closes open days, consolidates undigested day cards into anchored memories, updates thread health. Honors the Worker's configured digest mode — in local mode it only closes days and reports pending cards; the local script does the consolidating.",
         inputSchema: {
             type: 'object',
             properties: {
