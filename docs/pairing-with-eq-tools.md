@@ -119,6 +119,24 @@ curl -X POST https://tahl.yourname.workers.dev/v1/response-review \
 
 Useful for companions who want a quiet second look at how they're showing up.
 
+## Hosted runners: NESTChat, Haven, and similar apps
+
+Some companions do not have direct MCP access. They live behind a hosted
+runner: a web chat, a worker route, a queue consumer, or a Discord/Telegram
+bridge that invokes a model for them.
+
+That is still a first-class Tahl path. The runner can:
+
+1. POST the inbound human message to `/v1/events`.
+2. Read the returned `feeling_check.response_tint`.
+3. Include that tint and any small Tahl context in the model prompt.
+4. POST the companion reply to `/v1/events`.
+5. Optionally call `/v1/response-review` for post-response fit.
+
+The integration guide is [runner-integration.md](runner-integration.md). Use
+this path for NESTChat/Haven-style systems where the application owns the turn
+loop and the companion cannot reliably call `tahl_log_moment` by itself.
+
 ## Standalone is fine too
 
 No webhook, no events, no second tool: the seven MCP tools + the nightly

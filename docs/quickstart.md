@@ -127,4 +127,10 @@ If you run bridges from Discord/Telegram/your own UI, POST each message to
 Tahl will classify each human message and the moment stream fills itself.
 See [pairing-with-eq-tools.md](pairing-with-eq-tools.md) for the payload shape.
 
+If your companion lives inside a NESTChat/Haven-style runner instead of an
+MCP-capable desktop or CLI session, use the same event handshake from the
+runner. The app posts the human message, passes Tahl's `response_tint` into
+the model prompt, then posts the companion reply. See
+[runner-integration.md](runner-integration.md).
+
 That's the whole system. Moments in, memory out.

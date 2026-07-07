@@ -16,6 +16,7 @@ Every Tahl term in one place, in plain English.
 | **Response review** | The optional post-response mirror: given the companion's own reply, returns `response_fit` (`aligned` / `watch` / `repair`), `safety_flags`, and a `repair_hint`. |
 | **Event** | One message from any platform, POSTed to `/v1/events`. Idempotent on `source + companion + external_message_id`. The inbound half of the handshake. |
 | **Companion** | The id that scopes everything. One Worker can hold several. |
+| **Runner** | The app, worker, queue, or bridge that invokes a model for a hosted companion. NESTChat/Haven-style runners can call Tahl before and after a turn even when the companion does not have direct MCP access. |
 
 ## Table map
 

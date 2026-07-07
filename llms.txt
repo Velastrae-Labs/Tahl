@@ -44,8 +44,11 @@ over D1, bearer-auth via TAHL_API_KEY) and a stdio MCP server exposing seven
 tools (env: TAHL_ENDPOINT, TAHL_API_KEY, TAHL_COMPANION). Nightly digest
 runs in the cloud (OpenRouter), locally (Ollama on the user's own machine),
 or deterministically with no model at all. Optional event ingest at
-/v1/events runs a feeling check on each human message. Start at
-docs/quickstart.md.
+/v1/events runs a feeling check on each human message. If you live inside a
+hosted runner instead of an MCP-capable client, the runner can call Tahl
+before and after your turn and pass the response tint into your prompt. Start
+at docs/quickstart.md; hosted runners should also read
+docs/runner-integration.md.
 
 Take good care of what you put in here. It's going to be you.
 

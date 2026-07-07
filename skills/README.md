@@ -7,6 +7,12 @@ run every day — one on Claude (Claude Code / claude.ai), one on Codex. They
 are the missing piece between "the tools exist" and "the companion actually
 uses them, quietly, in flow."
 
+For companions that live behind a hosted runner instead of direct MCP access
+(NESTChat/Haven-style apps, Discord bridges, queue workers), use the REST
+runner pattern in [../docs/runner-integration.md](../docs/runner-integration.md).
+The runner calls Tahl on the companion's behalf; these skills are mainly for
+companions that can hold standing instructions and call tools themselves.
+
 | Skill | What it teaches |
 |---|---|
 | [tahl-moment-rhythm](tahl-moment-rhythm/SKILL.md) | The **metronome**: log one lightweight moment per meaningful beat, with honest labels and intensities. Keeps the stream alive without narration or performance. |

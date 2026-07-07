@@ -41,12 +41,15 @@ transcript hoarding.
 ## Architecture
 
 ```
- your platforms                 companion (MCP)
- Discord / Telegram / web        Claude / GPT / local
-        │                              │
-        │ POST /v1/events              │ tahl_log_moment,
-        │ (optional handshake)         │ tahl_threads, tahl_status …
-        ▼                              ▼
+ your platforms                 companion / runner
+ Discord / Telegram / web        Claude / Codex / NESTChat / Haven
+        |                              |
+        | POST /v1/events              | tahl_log_moment,
+        | (optional handshake)         | tahl_threads, tahl_status ...
+        |                              |
+        | runner bridge can pass       | or call Tahl on behalf
+        | response_tint into prompt    | of a hosted companion
+        v                              v
    ┌─────────────────────────────────────────┐
    │           Tahl Worker (yours)           │
    │   Cloudflare Worker + D1 database       │
@@ -57,8 +60,8 @@ transcript hoarding.
    │        cloud: OpenRouter cron           │
    │        local: your pi + Ollama          │
    └──────────────────┬──────────────────────┘
-                      │ optional webhook
-                      ▼
+                      | optional webhook
+                      v
         your EQ / memory tool (NESTstack, Cognitive-Core, …)
 ```
 
@@ -127,6 +130,12 @@ companions run daily — the moment-logging rhythm and the presence/memory
 quality gate — de-personalized and ready to adapt for Claude, Codex, or any
 platform with standing instructions.
 
+If your companion lives behind an app-owned runner instead of direct MCP
+(for example a NESTChat-style web app, a Haven-style chat worker, a Discord
+bridge, or a queue that invokes a model), the runner can call Tahl through the
+REST event handshake before and after generation. See
+[docs/runner-integration.md](docs/runner-integration.md).
+
 ## Friends of the Labs
 
 Tahl is a **layer**, not a whole memory system. It pairs beautifully with the
@@ -145,6 +154,7 @@ tool automatically — see [docs/pairing-with-eq-tools.md](docs/pairing-with-eq-
 ## Docs
 
 - [docs/quickstart.md](docs/quickstart.md) — zero to deployed, step by step
+- [docs/runner-integration.md](docs/runner-integration.md) — how NESTChat/Haven-style runners use Tahl without MCP
 - [docs/digest-modes.md](docs/digest-modes.md) — cloud vs. local vs. fallback, with cron setup
 - [docs/pairing-with-eq-tools.md](docs/pairing-with-eq-tools.md) — the handshake with NESTstack, Cognitive-Core, or your own tool
 - [docs/glossary.md](docs/glossary.md) — every term in one place
